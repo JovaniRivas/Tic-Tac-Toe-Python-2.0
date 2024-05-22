@@ -22,50 +22,34 @@ def get_valid_integers(x, y):  # range from x to y
             print(f"Please enter a valid number between {x} and {y}.")
 
 
-def get_algebraic_input(board_matrix_size):
-    algebraic_cols = ["a", "b", "c", "d", "e"]
-    algebraic_rows = ["1", "2", "3", "4", "5"]
+# Gets algebraic notation input from user (a1)
+# Converts valid notations to an appropriate integer for program to use
+def get_algebraic_input(board):
     while True:
         algebraic_input = input("Input: ")
         if len(algebraic_input) == 2 and algebraic_input.isalnum:  # Basic criteria
             algebraic_input = algebraic_input.lower()
-            for x in range(board_matrix_size):
-                for y in range(board_matrix_size):
-                    if algebraic_input == str(algebraic_cols[x] + algebraic_rows[y]):
-                        match algebraic_input[0]:
-                            case "a":
-                                valid_col = 1
-                            case "b":
-                                valid_col = 2
-                            case "c":
-                                valid_col = 3
-                            case "d":
-                                valid_col = 4
-                            case "e":
-                                valid_col = 5
-                        valid_row = board_matrix_size - int(algebraic_input[1]) + 1
+            for x in range(board.matrix_size):
+                for y in range(board.matrix_size):
+                    valid_position = board.ascii_column[x] + str(board.num_row[y])
+                    if algebraic_input == valid_position:
+                        valid_col = (
+                            ord(board.ascii_column[x]) - 96
+                        )  # 97(a) - 96 = 1, 98(b) - 96 = 2, etc
+                        valid_row = board.matrix_size - board.num_row[y] + 1
                         return valid_col, valid_row
         print(
-            f"Invalid input, please enter a value from a1 to {algebraic_cols[board_matrix_size - 1] + algebraic_rows[board_matrix_size - 1]}"
+            f"Invalid input, please enter a value from a1 to {board.ascii_column[board.matrix_size - 1] + str(board.num_row[board.matrix_size - 1])}"
         )
 
-def num_to_algebraic(col_pos, row_pos, board_matrix_size):
-    # Determine algebraic notation for col
-    match col_pos:
-        case 0:
-            algebraic_col = "a"
-        case 1:
-            algebraic_col = "b"
-        case 2:
-            algebraic_col = "c"
-        case 3:
-            algebraic_col = "d"
-        case 4:
-            algebraic_col = "e"
-    
+
+def num_to_algebraic(col_pos, row_pos, board):
+
+    # Algebraic Column: ascii for a (col 0) is 97
+    algebraic_col = chr(97 + col_pos)
     # Determine algebraic notation for row
-    algebraic_row = board_matrix_size - row_pos
-    
+    algebraic_row = board.matrix_size - row_pos
+
     # Return it already concatenated
-    algebraic_coordinate = str(algebraic_col) + str(algebraic_row)
+    algebraic_coordinate = algebraic_col + str(algebraic_row)
     return algebraic_coordinate

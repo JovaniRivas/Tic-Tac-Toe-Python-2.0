@@ -7,11 +7,17 @@ class Player:
     def __init__(self, name):
         self.name = name
 
+    def opponent_name(self):
+        if self.name == "X":
+            return "O"
+        else:
+            return "X"
+
     def make_move(self, board):
         print(f"Player {self.name}'s turn.")
         print("Make a move using algebraic notation")
         while True:
-            col, row = miscFunctions.get_algebraic_input(len(board.board_matrix))
+            col, row = miscFunctions.get_algebraic_input(board)
             if board.board_matrix[row - 1][col - 1] == " ":
                 board.board_matrix[row - 1][col - 1] = self.name
                 break
@@ -28,30 +34,30 @@ class CPU(Player):
         print(f"{self.__class__.__name__} {self.name}'s turn.")
 
         if self.difficulty_level == 1:  # Easy
-            selected_row, selected_col = CPUEngine.easy_CPU_engine(self.name, board)
-            board.board_matrix[selected_row][selected_col] = self.name
+            selected_row, selected_col = CPUEngine.easy_CPU_engine(board)
         elif self.difficulty_level == 2:  # Medium
-            selected_row, selected_col = CPUEngine.medium_CPU_engine(self.name, board)
-            board.board_matrix[selected_row][selected_col] = self.name
+            selected_row, selected_col = CPUEngine.medium_CPU_engine(self, board)
         elif self.difficulty_level == 3:  # Hard
-            selected_row, selected_col = CPUEngine.hard_CPU_engine(self.name, board)
-            board.board_matrix[selected_row][selected_col] = self.name
+            selected_row, selected_col = CPUEngine.hard_CPU_engine(self, board)
+        board.board_matrix[selected_row][selected_col] = self.name
         
-        algebraic_coordinate = miscFunctions.num_to_algebraic(selected_col, selected_row, len(board.board_matrix))
+        algebraic_coordinate = miscFunctions.num_to_algebraic(selected_col, selected_row, board)
         print(f"Move: {algebraic_coordinate}")
 
 
 class Board:
-    def __init__(self, size, board_matrix):
+    def __init__(self, size):
         self.size = size
         length = int(math.sqrt(size))
         self.board_matrix = [[" "] * length for x in range(length)]
+        self.matrix_size = len(self.board_matrix)
+        self.ascii_column = [chr(97 + i) for i in range(length)] #97 - a
+        self.num_row = [(i + 1) for i in range(length)]
+        
 
     def print_board(self):
         row = int(math.sqrt(self.size)) - 1
         col = int(math.sqrt(self.size)) - 1
-        algebraic_cols = ["a", "b", "c", "d", "e"]  # known max is 5
-        algebraic_rows = ["1", "2", "3", "4", "5"]
         miscFunctions.print_blank_lines()
         for x in range(row + 1):  # Printing row by row
             for y in range(col + 1):  # Printing matrix coordinate on col
@@ -60,21 +66,21 @@ class Board:
                 if y < col:
                     print("|", end="")
                 if y == col:
+                    # algebraic notation guide (row numbers)
                     print(
-                        "   " + algebraic_rows[row - x], end=""
-                    )  # algebraic notation guide
+                        "   " + str(self.num_row[row - x]), end=""
+                    )  
             print("")
             if x < row:  # Print horizontal dividers except after the last row
                 for z in range(col):
                     print("---|", end="")
                 print("---")
         print("")
-        # algebraic notation guide
+        # algebraic notation guide (ascii characters)
         for x in range(row + 1):
-            print(" " + algebraic_cols[x], end="  ")
+            print(" " + self.ascii_column[x], end="  ")
         print("")
         miscFunctions.print_dash()
-        #miscFunctions.print_blank_lines()
 
     def check_for_win(self, player_name):
         row = int(math.sqrt(self.size))
@@ -98,6 +104,7 @@ class Board:
 
 
 class Game_UI:
+    3
     def __init__(self) -> None:
         pass
 
@@ -198,7 +205,7 @@ def game_configuration():
     # Determine the board size
     Game_UI.print_board_options(Game_UI)
     game_config.get_board_size()
-    game_board = Board(game_config.board_size, None)
+    game_board = Board(game_config.board_size)
 
     # Start the game now that configuration is complete
     game(game_config.game_mode, Player1, Player2, game_board)

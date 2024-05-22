@@ -1,77 +1,47 @@
 import random
 
 
-def easy_CPU_engine(player_name, board):
-    # First compile all the available moves on the board
+# Easy: Returns a random move.
+def easy_CPU_engine(board):
     available_moves = determine_available_moves(board)
     return random.choice(available_moves)
-    # return max_moves_to_win(player_name, board.board_matrix)
 
 
-def medium_CPU_engine(player_name, board):
-    if player_name == "X":
-        opponent = "O"
+# Medium: Takes the longest path to win.
+def medium_CPU_engine(player, board):
+    available_moves = determine_available_moves(board)
+    longest_path = max_moves_to_win(player, board.board_matrix)
+    if longest_path != None:
+        return longest_path
     else:
-        opponent = "X"
-    row = len(board.board_matrix)
-    col = len(board.board_matrix)
+        return random.choice(available_moves)
 
-    # First compile all the available moves on the board
+
+# Hard: Takes the shortest path to win. Blocks if necessary.
+def hard_CPU_engine(player, board):
     available_moves = determine_available_moves(board)
 
-    # For all the available moves, check to see if any result in a win or a block
+    # Check if any available moves result in a win
     for coordinate in available_moves:
-        # Check for any winning moves first
-        selected_coordinate = coordinate
-        selected_row, selected_col = selected_coordinate
-        board.board_matrix[selected_row][selected_col] = player_name
-        """ Checking wins disabled for medium. Re-enable/modify if needed
-        if board.check_for_win(player_name) or len(available_moves) == 1:
-            board.board_matrix[selected_row][selected_col] = " "
-            return coordinate
-        """
-        # Check for any blocking moves next
-        board.board_matrix[selected_row][selected_col] = " "
-        board.board_matrix[selected_row][selected_col] = opponent
-        if board.check_for_win(opponent):
+        selected_row, selected_col = coordinate
+        board.board_matrix[selected_row][selected_col] = player.name
+        if board.check_for_win(player.name) or len(available_moves) == 1:
             board.board_matrix[selected_row][selected_col] = " "
             return coordinate
         board.board_matrix[selected_row][selected_col] = " "
-    # If no wins or blocks, make the worst best move (still an attempt to win, but the longest path)
-    return max_moves_to_win(player_name, board.board_matrix)
-
-
-def hard_CPU_engine(player_name, board):
-    if player_name == "X":
-        opponent = "O"
-    else:
-        opponent = "X"
-    row = len(board.board_matrix)
-    col = len(board.board_matrix)
-
-    # First compile all the available moves on the board
-    available_moves = determine_available_moves(board)
-
-    # For all the available moves, check to see if any result in a win or a block
-    for coordinate in available_moves:
-        # Check for any winning moves first
-        selected_coordinate = coordinate
-        selected_row, selected_col = selected_coordinate
-        board.board_matrix[selected_row][selected_col] = player_name
-        if board.check_for_win(player_name) or len(available_moves) == 1:
-            board.board_matrix[selected_row][selected_col] = " "
-            return coordinate
-        # Check for any blocking moves next
-        board.board_matrix[selected_row][selected_col] = " "
-        board.board_matrix[selected_row][selected_col] = opponent
-        if board.check_for_win(opponent):
+    # Check if any available moves block opponent from winning
+    for coordinate in available_moves:    
+        selected_row, selected_col = coordinate
+        board.board_matrix[selected_row][selected_col] = player.opponent_name()
+        if board.check_for_win(player.opponent_name()):
             board.board_matrix[selected_row][selected_col] = " "
             return coordinate
         board.board_matrix[selected_row][selected_col] = " "
     # If no wins or blocks, make the best move (minimum that will result in a win)
-    return min_moves_to_win(player_name, board.board_matrix)
+    return min_moves_to_win(player, board.board_matrix)
 
 
+# Simple function to determine all the available moves on the board
 def determine_available_moves(board):
     available_moves = []
     row = len(board.board_matrix)
@@ -83,105 +53,115 @@ def determine_available_moves(board):
     return available_moves
 
 
-# Given a player and board, find an available move that is closest to a win
-def min_moves_to_win(player_name, board_matrix):
+# Determine the closes path to a win
+def min_moves_to_win(player, board_matrix):
 
     # First, get the # of moves needed to win for every empty position
+    # One position may span different paths so must account for each method of winning
     row_move_dict, col_move_dict, fwd_diag_dict, rev_diag_dict = calculate_moves_to_win(
-        player_name, board_matrix
+        player, board_matrix
     )
 
-    # Determine the best move (minimum amount of moves to win) - Check ALL dictionaries
-    min_moves_to_win = float("inf")
-    # Rows
-    for coordinate, moves_to_win in row_move_dict.items():
-        if moves_to_win < min_moves_to_win:
-            min_moves_to_win = moves_to_win
-            min_coordinate = coordinate
-    # Columns
-    for coordinate, moves_to_win in col_move_dict.items():
-        if moves_to_win < min_moves_to_win:
-            min_moves_to_win = moves_to_win
-            min_coordinate = coordinate
-    # Forward Diagonal (Top Left to Bottom Right)
-    for coordinate, moves_to_win in fwd_diag_dict.items():
-        if moves_to_win < min_moves_to_win:
-            min_moves_to_win = moves_to_win
-            min_coordinate = coordinate
-    # Reverse Diagonal (Top Right to Bottom Left)
-    for coordinate, moves_to_win in rev_diag_dict.items():
-        if moves_to_win < min_moves_to_win:
-            min_moves_to_win = moves_to_win
-            min_coordinate = coordinate
+    # Determine the minimum for each play Note: Board length not requred for min calculation
+    min_row_coord, min_row_move = get_min_or_max(row_move_dict, "min", None)
+    min_col_coord, min_col_move = get_min_or_max(col_move_dict, "min", None)
+    min_fwd_diag_coord, min_fdiag_move = get_min_or_max(fwd_diag_dict, "min", None)
+    min_rev_diag_coord, min_rdiag_move = get_min_or_max(rev_diag_dict, "min", None)
 
-    return min_coordinate
+    min_dict = {
+        min_row_move: min_row_coord,
+        min_col_move: min_col_coord,
+        min_fdiag_move: min_fwd_diag_coord,
+        min_rdiag_move: min_rev_diag_coord,
+    }
+
+    return min_dict[min(min_row_move, min_col_move, min_fdiag_move, min_rdiag_move)]
 
 
-# Given a player and board, find an available move that is farthest from a win
-def max_moves_to_win(player_name, board_matrix):
+# Determine the farthest path to a win (highest moves to win )
+def max_moves_to_win(player, board_matrix):
+    longest_path_coordinate = None
 
     # First, get the # of moves needed to win for every empty position
+    # One position may span different paths so must account for each method of winning
     row_move_dict, col_move_dict, fwd_diag_dict, rev_diag_dict = calculate_moves_to_win(
-        player_name, board_matrix
+        player, board_matrix
     )
 
-    # Find the best coordinate with the maximum moves to win
-    # Must account for scenarios where it is impossible to win (calculate_moves_to_win logic)
-    max_moves_to_win = float("-inf")
-    max_coordinate = None
-    # Rows
-    for coordinate, moves_to_win in row_move_dict.items():
-        if moves_to_win > max_moves_to_win and moves_to_win < len(board_matrix):
-            max_moves_to_win = moves_to_win
-            max_coordinate = coordinate
-    # Columns
-    for coordinate, moves_to_win in col_move_dict.items():
-        if moves_to_win > max_moves_to_win and moves_to_win < len(board_matrix):
-            max_moves_to_win = moves_to_win
-            max_coordinate = coordinate
-    # Forward Diagonal (Top Left to Bottom Right)
-    for coordinate, moves_to_win in fwd_diag_dict.items():
-        if moves_to_win > max_moves_to_win and moves_to_win < len(board_matrix):
-            max_moves_to_win = moves_to_win
-            max_coordinate = coordinate
-    # Reverse Diagonal (Top Right to Bottom Left)
-    for coordinate, moves_to_win in rev_diag_dict.items():
-        if moves_to_win > max_moves_to_win and moves_to_win < len(board_matrix):
-            max_moves_to_win = moves_to_win
-            max_coordinate = coordinate
+    # Determine the maximum Note: Board length requred for max calculation
+    max_row_coord, max_row_move = get_min_or_max(
+        row_move_dict, "max", len(board_matrix)
+    )
+    max_col_coord, max_col_move = get_min_or_max(
+        col_move_dict, "max", len(board_matrix)
+    )
+    max_fwd_diag_coord, max_fdiag_move = get_min_or_max(
+        fwd_diag_dict, "max", len(board_matrix)
+    )
+    max_rev_diag_coord, max_rdiag_move = get_min_or_max(
+        rev_diag_dict, "max", len(board_matrix)
+    )
 
-    # If moves_to_win > length of board, basically going to be a tied game
-    # Just send the min moves to move along
-    if max_coordinate != None:
-        return max_coordinate
+    max_dict = {
+        max_row_move: max_row_coord,
+        max_col_move: max_col_coord,
+        max_fdiag_move: max_fwd_diag_coord,
+        max_rdiag_move: max_rev_diag_coord,
+    }
+
+    longest_path_coordinate = max_dict[
+        max(max_row_move, max_col_move, max_fdiag_move, max_rdiag_move)
+    ]
+    if longest_path_coordinate != None:
+        return longest_path_coordinate
     else:
-        return min_moves_to_win(player_name, board_matrix)
+        return None
+
+
+# Returns the shortest/longest path within a givin dictionary
+def get_min_or_max(dictionary, choice, board_matrix_length):
+    if choice == "min":
+        min_moves_to_win = float("inf")
+        min_coordinate = None
+        for coordinate, moves_to_win in dictionary.items():
+            if moves_to_win < min_moves_to_win:
+                min_moves_to_win = moves_to_win
+                min_coordinate = coordinate
+        return min_coordinate, min_moves_to_win
+    elif choice == "max":
+        max_moves_to_win = float("-inf")
+        max_coordinate = None
+        for coordinate, moves_to_win in dictionary.items():
+            if moves_to_win > max_moves_to_win and moves_to_win < board_matrix_length:
+                max_moves_to_win = moves_to_win
+                max_coordinate = coordinate
+        if max_coordinate != None:
+            return max_coordinate, max_moves_to_win
+        else:
+            return None, max_moves_to_win
 
 
 # Calculate the number of moves needed to win for each available position
-def calculate_moves_to_win(player_name, board_matrix):
-    row = len(board_matrix)
-    col = len(board_matrix)
-    row_move_dict = {}
-    col_move_dict = {}
-    fwd_diag_move_dict = {}
-    rev_diag_move_dict = {}
-    if player_name == "X":
-        opponent_name = "O"
-    else:
-        opponent_name = "X"
+def calculate_moves_to_win(player, board_matrix):
+    row = col = len(board_matrix)
+    row_move_dict, col_move_dict, fwd_diag_move_dict, rev_diag_move_dict = (
+        {},
+        {},
+        {},
+        {},
+    )
 
     # For each row, col, and diag, determine the moves to win
-    # Map that value appropriately for each
+
     # Rows
     for i in range(row):
         moves_to_win = row
         for j in range(col):
             if board_matrix[i][j] == " ":
                 row_move_dict[(i, j)] = 0
-            elif board_matrix[i][j] == player_name:
+            elif board_matrix[i][j] == player.name:
                 moves_to_win -= 1
-            elif board_matrix[i][j] == opponent_name:
+            elif board_matrix[i][j] == player.opponent_name():
                 moves_to_win += row  # can't win..
         # Map the # of moves to win to each element in that row
         for j in range(col):
@@ -194,9 +174,9 @@ def calculate_moves_to_win(player_name, board_matrix):
         for j in range(row):
             if board_matrix[j][i] == " ":
                 col_move_dict[(j, i)] = 0
-            elif board_matrix[j][i] == player_name:
+            elif board_matrix[j][i] == player.name:
                 moves_to_win -= 1
-            elif board_matrix[j][i] == opponent_name:
+            elif board_matrix[j][i] == player.opponent_name():
                 moves_to_win += row  # can't win..
         # Map the # of moves to win to each element in that row
         for j in range(col):
@@ -204,32 +184,31 @@ def calculate_moves_to_win(player_name, board_matrix):
                 col_move_dict[(j, i)] = moves_to_win
 
     # Forward Diagonal (Top Left to Bottom Right)
-    board_width = len(board_matrix)
-    for i in range(board_width):
-        moves_to_win = board_width
+    moves_to_win = len(board_matrix)
+    for i in range(len(board_matrix)):
         if board_matrix[i][i] == " ":
             fwd_diag_move_dict[(i, i)] = 0
-        elif board_matrix[i][i] == player_name:
+        elif board_matrix[i][i] == player.name:
             moves_to_win -= 1
-        elif board_matrix[i][i] == opponent_name:
-            moves_to_win += board_width  # can't win..
+        elif board_matrix[i][i] == player.opponent_name():
+            moves_to_win += len(board_matrix)  # can't win..
     # Map the # of moves to win to each element in that row
-    for j in range(board_width):
+    for i in range(len(board_matrix)):
         if board_matrix[i][i] == " ":
             fwd_diag_move_dict[(i, i)] = moves_to_win
 
     # Reverse Diagonal (Top Right to Bottom Left)
-    for i in range(board_width):
-        moves_to_win = board_width
-        if board_matrix[i][board_width - 1 - i] == " ":
-            rev_diag_move_dict[(i, board_width - 1 - i)] = 0
-        elif board_matrix[i][board_width - 1 - i] == player_name:
+    moves_to_win = len(board_matrix)
+    for i in range(len(board_matrix)):
+        if board_matrix[i][len(board_matrix) - 1 - i] == " ":
+            rev_diag_move_dict[(i, len(board_matrix) - 1 - i)] = 0
+        elif board_matrix[i][len(board_matrix) - 1 - i] == player.name:
             moves_to_win -= 1
-        elif board_matrix[i][board_width - 1 - i] == opponent_name:
-            moves_to_win += board_width  # can't win..
+        elif board_matrix[i][len(board_matrix) - 1 - i] == player.opponent_name():
+            moves_to_win += len(board_matrix)  # can't win..
     # Map the # of moves to win to each element in that row
-    for j in range(board_width):
-        if board_matrix[i][board_width - 1 - i] == " ":
-            rev_diag_move_dict[(i, board_width - 1 - i)] = moves_to_win
+    for i in range(len(board_matrix)):
+        if board_matrix[i][len(board_matrix) - 1 - i] == " ":
+            rev_diag_move_dict[(i, len(board_matrix) - 1 - i)] = moves_to_win
 
     return row_move_dict, col_move_dict, fwd_diag_move_dict, rev_diag_move_dict
